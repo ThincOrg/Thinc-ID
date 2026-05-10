@@ -1,14 +1,10 @@
 import type { Response, Request, NextFunction } from "express";
+import { ErrorRequestHandler } from "express";
 
 import { ServerError } from "../global/types.ts";
 import logger from "./logger.ts";
 
-const errorHandler = (
-  err: unknown,
-  res: Response,
-  _req: Request,
-  _next: NextFunction,
-): Response => {
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next): Response => {
   if (err instanceof ServerError) {
     const statusCode: number = err.statusCode;
     const message: string = err.message;
