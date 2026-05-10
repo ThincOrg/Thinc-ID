@@ -7,7 +7,7 @@ class Mailer implements MailerType {
   private mail: string | undefined = process.env.EMAIL;
 
   private transporter = nodemailer.createTransport({
-    host: "smtp.zohomail.com",
+    host: "smtp.zoho.com",
     port: 587,
     secure: false,
     auth: {
