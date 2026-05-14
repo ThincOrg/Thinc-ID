@@ -10,32 +10,31 @@ import "dotenv/config";
 
 import AccountModel from "../model/account.ts";
 import Mailer from "../config/mail.ts";
-import type { propriety } from "../global/types.ts";
 import AccountZodObject from "../global/zod.validation.object.ts";
 import logger from "../middlewares/logger.ts";
 
 const register = wrapper(
   async (req: Request, res: Response): Promise<Response> => {
+    const result = AccountZodObject.safeParse(req.body);
+
+    if (!result.success) {
+      logger.error(z.prettifyError(result.error));
+
+      return res.status(400).json({
+        status: 400,
+        message: z.flattenError(result.error).fieldErrors,
+      });
+    }
+
     const {
       username,
       email,
       password,
     }: {
-      username: propriety;
-      email: propriety;
-      password: propriety;
-    } = req.body;
-
-    const result = AccountZodObject.safeParse({ username, email, password });
-
-    if (!result.success) {
-      logger.error(result.error);
-
-      return res.status(400).json({
-        status: 400,
-        message: result.error,
-      });
-    }
+      username?: string;
+      email: string;
+      password: string;
+    } = result.data;
 
     const salt: number = 10;
     const hashedPassword: string = await bcrypt.hash(
@@ -69,9 +68,7 @@ const register = wrapper(
 );
 
 const resendVerificationCode = wrapper(
-  async (req: Request, res: Response): Promise<void> => {
-    const { email }: { email: string | undefined } = req.body;
-
+  async (req: Request, res: Response): Promise<Response> => {
     const emailVerificationObject = AccountZodObject.pick({ email: true });
     const result = emailVerificationObject.safeParse(req.body);
 
@@ -80,9 +77,11 @@ const resendVerificationCode = wrapper(
 
       return res.status(400).json({
         status: 400,
-        message: z.prettifyError(result.error).fieldErrors,
+        message: z.flattenError(result.error).fieldErrors,
       });
     }
+
+    const { email }: { email: string } = result.data;
 
     const account = await AccountModel.findOne(
       { email },
@@ -127,6 +126,15 @@ const resendVerificationCode = wrapper(
 
 const verifyAccount = wrapper(
   async (req: Request, res: Response): Promise<Response> => {
+    if (!req.body) {
+      logger.warn("Body is undefined");
+
+      return res.status(400).json({
+        status: 400,
+        message: "Body is undefined",
+      });
+    }
+
     const { code }: { code: string } = req.body;
 
     const account = await AccountModel.findOne(
@@ -136,6 +144,7 @@ const verifyAccount = wrapper(
 
     if (!account) {
       logger.error({ message: "Invalid verification", invalidCode: code });
+
       return res.status(400).json({
         status: 400,
         message: "Invalid verification code",
@@ -147,6 +156,7 @@ const verifyAccount = wrapper(
       account.verificationExpiry < new Date(Date.now())
     ) {
       logger.error("Verification code expired");
+
       return res.status(400).json({
         status: 400,
         message: "Verification code expired",
@@ -170,12 +180,7 @@ const verifyAccount = wrapper(
 
 const login = wrapper(
   async (req: Request, res: Response): Promise<Response> => {
-    const {
-      email,
-      password,
-    }: { email: string | undefined; password: string | undefined } = req.body;
-
-    const result = AccountZodObject.safeParse({ email, password });
+    const result = AccountZodObject.safeParse(req.body);
 
     if (!result.success) {
       logger.error(z.prettifyError(result.error));
@@ -185,6 +190,14 @@ const login = wrapper(
         message: z.flattenError(result.error).fieldErrors,
       });
     }
+
+    const {
+      email,
+      password,
+    }: {
+      email: string;
+      password: string;
+    } = result.data;
 
     const account = await AccountModel.findOne({ email }, { __v: false });
 
@@ -198,6 +211,7 @@ const login = wrapper(
 
     if (!account.isVerified) {
       logger.warn({ message: "Account is not verified", account: email });
+
       return res.status(401).json({
         status: 401,
         message: "Account is not verified",
@@ -214,6 +228,7 @@ const login = wrapper(
         message: "Email or password are incorrect",
         account: email,
       });
+
       return res.status(401).json({
         status: 401,
         message: "Email or password are incorrect",

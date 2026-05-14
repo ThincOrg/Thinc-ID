@@ -11,4 +11,3 @@ export interface MailerType {
   sendVerificationMail(email: string, code: number): Promise<void>;
 }
 
-export type propriety = string | undefined;
