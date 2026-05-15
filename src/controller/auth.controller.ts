@@ -135,7 +135,7 @@ const verifyAccount = wrapper(
       });
     }
 
-    const { code }: { code: string } = req.body;
+    const { code }: { code: number } = req.body;
 
     const account = await AccountModel.findOne(
       { verificationCode: code },
@@ -311,10 +311,13 @@ const logout = wrapper(
     }
 
     for (let i: number = 0; i < account.refreshToken.length; i++) {
-      let current = account.refreshToken;
+      let current: {
+        token: string;
+        expiry: Date;
+      } = account.refreshToken[i];
 
       if (current.token === refreshToken) {
-        if (current.expiry < new Date(Date.now())) {
+        if (current.expiy < new Date(Date.now())) {
           logger.warn({
             message: "Session id already expired",
             account: account.email,
@@ -433,7 +436,10 @@ const logoutAll = wrapper(
       });
     }
 
-    if (account.verificationExpiry < new Date(Date.now())) {
+    if (
+      account.verificationExpiry &&
+      account.verificationExpiry < new Date(Date.now())
+    ) {
       logger.warn({ message: "Verification code expired", code: code });
 
       account.verificationCode = null;
@@ -448,7 +454,7 @@ const logoutAll = wrapper(
 
     account.verificationCode = null;
     account.verificationExpiry = null;
-    account.refreshToken = [];
+    account.refreshToken = [] as any;
     await account.save();
 
     logger.info({

@@ -26,7 +26,7 @@ const AccountSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    verificationCode: { type: String },
+    verificationCode: { type: Number },
     verificationExpiry: { type: Date },
     resetCode: { type: String, default: null },
     resetExpiry: { type: Date, default: null },
