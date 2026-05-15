@@ -311,7 +311,7 @@ const logout = wrapper(
     }
 
     for (let i: number = 0; i < account.refreshToken.length; i++) {
-      let current: { token: String; expiry: Date } = account.refreshToken;
+      let current = account.refreshToken;
 
       if (current.token === refreshToken) {
         if (current.expiry < new Date(Date.now())) {
@@ -397,6 +397,72 @@ const logoutAllRequest = wrapper(
   },
 );
 
+const logoutAll = wrapper(
+  async (req: Request, res: Response): Promise<Response> => {
+    const codeValidation = z.object({
+      code: z.coerce.number().min(6, "Verification code too short"),
+    });
+
+    const result = codeValidation.safeParse(req.body);
+
+    if (!result.success) {
+      logger.error({ message: z.prettifyError(result.error) });
+
+      return res.status(400).json({
+        status: 400,
+        message: z.flattenError(result.error).fieldErrors,
+      });
+    }
+
+    const code: number = result.data.code;
+
+    const account = await AccountModel.findOne(
+      { verificationCode: code },
+      { __v: false, password: false },
+    );
+
+    if (!account) {
+      logger.error({
+        message: "Account not found. Invalid verification code",
+        code: code,
+      });
+
+      return res.status(404).json({
+        status: 404,
+        message: "Account not found. Invalid verification code",
+      });
+    }
+
+    if (account.verificationExpiry < new Date(Date.now())) {
+      logger.warn({ message: "Verification code expired", code: code });
+
+      account.verificationCode = null;
+      account.verificationExpiry = null;
+      await account.save();
+
+      return res.status(400).json({
+        status: 400,
+        message: "Verification code expired",
+      });
+    }
+
+    account.verificationCode = null;
+    account.verificationExpiry = null;
+    account.refreshToken = [];
+    await account.save();
+
+    logger.info({
+      message: "Logout all devices successfully",
+      account: account.email,
+    });
+
+    return res.status(200).json({
+      status: 200,
+      message: "Logout all devices successfully",
+    });
+  },
+);
+
 export {
   register,
   verifyAccount,
@@ -404,4 +470,5 @@ export {
   login,
   logout,
   logoutAllRequest,
+  logoutAll,
 };
