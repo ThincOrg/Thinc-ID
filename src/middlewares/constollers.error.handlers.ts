@@ -18,4 +18,55 @@ const validationErrorHandler = (
   });
 };
 
-export { validationErrorHandler };
+const accountNotFoundHandler = (
+  res: Response,
+  options: {
+    email?: string;
+    token?: string;
+    code?: number;
+  },
+): Response => {
+  if (options.email) {
+    logger.error({ message: "Account not found", account: options.email });
+
+    return res.status(404).json({
+      status: 404,
+      message: "Account not found",
+    });
+  }
+
+  if (options.token) {
+    logger.error({
+      message: "Account not found. Invalid session id",
+      token: options.token,
+    });
+
+    return res.status(404).json({
+      status: 404,
+      message: "Account not found. Invalid session id",
+    });
+  }
+
+  if (options.code) {
+    logger.error({
+      message: "Account not found. Invalid verification code",
+      code: options.code,
+    });
+
+    return res.status(404).json({
+      status: 404,
+      message: "Account not found. Invalid verification code",
+    });
+  }
+
+  logger.error({
+    message: "Account not found",
+  });
+
+  return res.status(404).json({
+    status: 404,
+    message: "Account not found",
+  });
+};
+
+export { validationErrorHandler, accountNotFoundHandler };

@@ -11,7 +11,10 @@ import AccountModel from "../model/account.ts";
 import Mailer from "../config/mail.ts";
 import AccountZodObject from "../global/zod.validation.object.ts";
 import logger from "../middlewares/logger.ts";
-import { validationErrorHandler } from "../middlewares/constollers.error.handlers.ts";
+import {
+  accountNotFoundHandler,
+  validationErrorHandler,
+} from "../middlewares/constollers.error.handlers.ts";
 
 const register = wrapper(
   async (req: Request, res: Response): Promise<Response> => {
@@ -74,14 +77,7 @@ const resendVerificationCode = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({ message: "Account not found", account: email });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, email);
 
     if (account.isVerified) {
       logger.warn({ message: "Account already verified", account: email });
@@ -128,14 +124,7 @@ const verifyAccount = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({ message: "Invalid verification", invalidCode: code });
-
-      return res.status(400).json({
-        status: 400,
-        message: "Invalid verification code",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, {});
 
     if (
       account.verificationExpiry &&
@@ -180,13 +169,7 @@ const login = wrapper(
 
     const account = await AccountModel.findOne({ email }, { __v: false });
 
-    if (!account) {
-      logger.error("Account not found");
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { email });
 
     if (!account.isVerified) {
       logger.warn({ message: "Account is not verified", account: email });
@@ -260,17 +243,7 @@ const logout = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({
-        message: "Account not found. Invalid session id",
-        token: refreshToken,
-      });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found. Invalid session id",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { token: refreshToken });
 
     for (let i: number = 0; i < account.refreshToken.length; i++) {
       let current: {
@@ -326,17 +299,7 @@ const logoutAllRequest = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({
-        message: "Account not found. Invalid session id",
-        token: refreshToken,
-      });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found. Invalid session id",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { token: refreshToken });
 
     for (let i: number = 0; i < account.refreshToken.length; i++) {
       let current: {
@@ -397,17 +360,7 @@ const logoutAll = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({
-        message: "Account not found. Invalid verification code",
-        code: code,
-      });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found. Invalid verification code",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { code });
 
     if (
       account.verificationExpiry &&
@@ -461,17 +414,7 @@ const refresh = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({
-        message: "Account not found. Invalid session id",
-        token: token,
-      });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found. Invalid session id",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { token });
 
     for (let i: number = 0; i < account.refreshToken.length; i++) {
       const current: {
@@ -548,14 +491,7 @@ const forgotPassword = wrapper(
       { __v: false, password: false },
     );
 
-    if (!account) {
-      logger.error({ message: "Account not found", email: email });
-
-      return res.status(404).json({
-        status: 404,
-        message: "Account not found",
-      });
-    }
+    if (!account) return accountNotFoundHandler(res, { email });
 
     const code: number = crypto.randomInt(100000, 999999);
     const expiry: Date = new Date(Date.now() + 10 * 60 * 1000);
