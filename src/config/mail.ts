@@ -1,5 +1,4 @@
 import nodemailer from "nodemailer";
-import { ServerError } from "../global/types.ts";
 import type { MailerType } from "../global/types.ts";
 import logger from "../middlewares/logger.ts";
 import mailerError from "../middlewares/mailer.error.handler.ts";
