@@ -13,6 +13,7 @@ import {
   forgotPassword,
   resetPasswordToken,
   resetPassword,
+  me,
 } from "../controller/auth.controller.ts";
 
 const AuthRouter: Router = express.Router();
@@ -31,5 +32,7 @@ AuthRouter.post("/refresh", refresh);
 AuthRouter.post("/forgot-password", forgotPassword);
 AuthRouter.post("/reset-password-token", resetPasswordToken);
 AuthRouter.post("/reset-password", resetPassword);
+
+AuthRouter.get("/me", me);
 
 export default AuthRouter;

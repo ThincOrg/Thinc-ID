@@ -3,6 +3,7 @@ import wrapper from "../middlewares/asyncWrapper.middleware.ts";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import type { JwtPayload } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import * as z from "zod";
 import "dotenv/config";
@@ -648,6 +649,45 @@ const resetPassword = wrapper(
   },
 );
 
+const me = wrapper(async (req: Request, res: Response): Promise<Response> => {
+  const tokenValidation = z.object({
+    token: z.jwt("Invalid access token"),
+  });
+
+  const result = tokenValidation.safeParse({
+    token: req.headers.authorization?.split(" ")[1],
+  });
+
+  if (!result.success) return validationErrorHandler(res, result);
+
+  const accessToken: string = result.data.token;
+
+  const decoded = jwt.verify(accessToken, process.env.JWT_SECRET ?? "");
+
+  const email: string = decoded.email;
+
+  const account = await AccountModel.findOne(
+    { email },
+    { __v: false, password: false },
+  );
+
+  if (!account) return accountNotFoundHandler(res, { token: accessToken });
+
+  const accountData: {
+    username: string;
+    email: string;
+  } = {
+    username: account.username,
+    email: account.email,
+  };
+
+  return res.status(200).json({
+    status: 200,
+    message: "Retrieved data for account",
+    account: accountData,
+  });
+});
+
 export {
   register,
   verifyAccount,
@@ -660,4 +700,5 @@ export {
   forgotPassword,
   resetPasswordToken,
   resetPassword,
+  me,
 };
